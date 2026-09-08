@@ -1,0 +1,15 @@
+services:
+  betting-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: betting-bot
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/betting_bot.db
+    volumes:
+      - ./data:/app/data

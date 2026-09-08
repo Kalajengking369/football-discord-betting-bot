@@ -1,0 +1,15 @@
+**/.git
+**/.gitignore
+**/.vscode
+**/bin
+**/obj
+**/publish
+**/*.db
+**/*.sqlite
+**/data
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+*.env
+.env*
+!.env.example
