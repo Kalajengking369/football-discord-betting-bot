@@ -1,7 +1,7 @@
 # ⚽ Football Discord Betting Bot
 
 [![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
-[![Discord.Net](https://img.shields.io/badge/Discord.Net-3.19-5865F2?logo=discord&logoColor=white)](https://github.com/discord-net/Discord.Net)
+[![Discord.Net](https://img.shields.io/badge/Discord.Net-3.19.1-5865F2?logo=discord&logoColor=white)](https://github.com/discord-net/Discord.Net)
 [![Docker Ready](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![CI Build & Test](https://github.com/Kalajengking369/football-discord-betting-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/Kalajengking369/football-discord-betting-bot/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -48,7 +48,7 @@ Powered by **.NET 9**, **Discord.Net**, **Entity Framework Core (SQLite)**, and 
 ### Prerequisites
 
 1. **Discord Bot Token**: Create an application on the [Discord Developer Portal](https://discord.com/developers/applications):
-   - Under **Bot**, enable **Guilds** and **Server Members Intent** (Gateway Intents).
+   - Under **Bot**, ensure standard permissions are enabled (no privileged Gateway Intents required).
    - Generate your bot token and invite the bot to your server with `Send Messages`, `Embed Links`, and `Manage Messages` permissions.
 2. **Football API Key**: Register a free API token at [football-data.org](https://www.football-data.org/).
 

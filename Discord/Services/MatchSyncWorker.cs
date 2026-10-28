@@ -23,7 +23,7 @@ namespace Discord.Services
         
         private int CompetitionId => _configuration.GetValue<int>("BotSettings:CompetitionId", 2000);
         private TimeSpan SyncInterval => TimeSpan.FromMinutes(_configuration.GetValue<int>("BotSettings:SyncIntervalMinutes", 10));
-        private int DashboardDays => _configuration.GetValue<int>("BotSettings:DashboardDays", 3);
+        private int DashboardDays => _configuration.GetValue<int>("BotSettings:DashboardDays", 12);
 
         public MatchSyncWorker(
             IDbContextFactory<AppDbContext> dbContextFactory,
