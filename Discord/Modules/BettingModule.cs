@@ -326,10 +326,11 @@ namespace Discord.Modules
                 catch {}
 
                 var components = new ComponentBuilder()
-                    .WithButton($"{homeName} (Advances)", $"select_winner:{matchId}:{homeScore}:{awayScore}:1", ButtonStyle.Primary, homeEmoji)
-                    .WithButton($"{awayName} (Advances)", $"select_winner:{matchId}:{homeScore}:{awayScore}:2", ButtonStyle.Danger, awayEmoji);
+                    .WithButton($"{homeName} (Advances)", $"select_winner:{matchId}:{homeScore}:{awayScore}:1", ButtonStyle.Primary, homeEmoji, row: 0)
+                    .WithButton($"{awayName} (Advances)", $"select_winner:{matchId}:{homeScore}:{awayScore}:2", ButtonStyle.Danger, awayEmoji, row: 0)
+                    .WithButton("Regular Draw (No Overtime)", $"select_winner:{matchId}:{homeScore}:{awayScore}:0", ButtonStyle.Secondary, new Emoji("🤝"), row: 1);
 
-                await RespondAsync($"You predicted a draw **{homeScore}:{awayScore}**. Which team will advance in playoffs?", components: components.Build(), ephemeral: true);
+                await RespondAsync($"You predicted a draw **{homeScore}:{awayScore}**. Select who advances (for knockout/playoff matches), or choose **Regular Draw**:", components: components.Build(), ephemeral: true);
             }
         }
 
@@ -339,12 +340,14 @@ namespace Discord.Modules
             if (!int.TryParse(matchIdStr, out int matchId) || 
                 !int.TryParse(homeScoreStr, out int homeScore) || 
                 !int.TryParse(awayScoreStr, out int awayScore) ||
-                !int.TryParse(winnerStr, out int winner) ||
+                !int.TryParse(winnerStr, out int winnerVal) ||
                 homeScore < 0 || awayScore < 0 || homeScore > 99 || awayScore > 99)
             {
                 await RespondAsync("Invalid action.", ephemeral: true);
                 return;
             }
+
+            int? winner = (winnerVal == 1 || winnerVal == 2) ? winnerVal : null;
 
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
@@ -370,10 +373,6 @@ namespace Discord.Modules
 
             var existingBet = await dbContext.Bets
                 .FirstOrDefaultAsync(b => b.MatchId == matchId && b.UserId == Context.User.Id);
-
-            string winnerTeamName = (winner == 1) ? match.HomeTeam : match.AwayTeam;
-            string winnerFlag = FlagHelper.GetFlag(winnerTeamName);
-            string winnerNameFormatted = FlagHelper.GetName(winnerTeamName);
 
             string homeFlag = FlagHelper.GetFlag(match.HomeTeam);
             string awayFlag = FlagHelper.GetFlag(match.AwayTeam);
@@ -401,16 +400,27 @@ namespace Discord.Modules
 
             await dbContext.SaveChangesAsync();
 
+            string statusText = " (Regular Draw)";
+            if (winner.HasValue)
+            {
+                string winnerTeamName = (winner.Value == 1) ? match.HomeTeam : match.AwayTeam;
+                string winnerFlag = FlagHelper.GetFlag(winnerTeamName);
+                string winnerNameFormatted = FlagHelper.GetName(winnerTeamName);
+                statusText = $" ({winnerFlag} {winnerNameFormatted} to advance)";
+            }
+
+            string savedMessage = $"Your bet on **{homeFlag} {homeName} vs {awayName} {awayFlag}** has been saved: **{homeScore}:{awayScore}**{statusText}.";
+
             if (Context.Interaction is SocketMessageComponent componentInteraction)
             {
                 await componentInteraction.UpdateAsync(msg => {
-                    msg.Content = $"Your bet on **{homeFlag} {homeName} vs {awayName} {awayFlag}** has been saved: **{homeScore}:{awayScore}** ({winnerFlag} {winnerNameFormatted} to advance).";
+                    msg.Content = savedMessage;
                     msg.Components = new ComponentBuilder().Build();
                 });
             }
             else
             {
-                await RespondAsync($"Your bet on **{homeFlag} {homeName} vs {awayName} {awayFlag}** has been saved: **{homeScore}:{awayScore}** ({winnerFlag} {winnerNameFormatted} to advance).", ephemeral: true);
+                await RespondAsync(savedMessage, ephemeral: true);
             }
         }
 
@@ -459,11 +469,12 @@ namespace Discord.Modules
                 .AddField("/history", "View your betting history (or inspect another user's public bets).")
                 .AddField("/leaderboard", "View current rankings and standings.")
                 .AddField("Scoring System",
-                    "• **4 points**: Exact score at regular time (90 min)\n" +
-                    "• **2 points**: Correct winner with a different score\n" +
-                    "• **2 points**: Predicted draw and match ended in a draw (90 min)\n" +
-                    "• **1 point**: Predicted team win, but that team won in extra time / penalties\n" +
-                    "• **+1 point**: Added to draw predictions for correctly guessing who advances in playoffs\n" +
+                    $"• **{_scoringService.ExactScorePoints} points**: Exact score at regular time (90 min)\n" +
+                    $"• **{_scoringService.WinnerPoints} points**: Correct winner with a different score\n" +
+                    $"• **{_scoringService.DrawPoints} points**: Predicted draw and match ended in a draw (90 min)\n" +
+                    $"• **+{_scoringService.PlayoffBonusPoints} point**: Added to draw predictions for correctly guessing who advances in playoffs\n" +
+                    $"• **{_scoringService.OvertimeBonusPoints} point**: Predicted team win, but that team won in extra time / penalties\n" +
+                    $"• **{_scoringService.OvertimeBonusPoints} point**: Predicted draw with advancement pick, but that team won in regular time\n" +
                     "• **0 points**: Incorrect prediction")
                 .WithColor(Color.Green)
                 .WithFooter("Predictions close automatically at exact match kickoff.");
@@ -506,6 +517,12 @@ namespace Discord.Modules
                 match.AwayScore = detailedMatch.AwayScore;
                 match.Winner = detailedMatch.Winner;
                 match.Status = detailedMatch.Status;
+            }
+
+            if (match.HomeScore == null || match.AwayScore == null)
+            {
+                await FollowupAsync("Official match score is not available yet. Cannot recalculate.", ephemeral: true);
+                return;
             }
 
             // Prepare public results embed
@@ -564,7 +581,7 @@ namespace Discord.Modules
 
             // Send to results channel
             var channelIdStr = _configuration["ResultsChannelId"];
-            if (ulong.TryParse(channelIdStr, out var channelId))
+            if (ulong.TryParse(channelIdStr, out var channelId) && channelId != 0)
             {
                 var channel = await _discordClient.GetChannelAsync(channelId) as IMessageChannel;
                 if (channel != null)

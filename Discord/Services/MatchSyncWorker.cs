@@ -147,7 +147,7 @@ namespace Discord.Services
             if (match == null) return;
 
             var channelIdStr = _configuration["NotificationChannelId"];
-            if (!ulong.TryParse(channelIdStr, out var channelId)) return;
+            if (!ulong.TryParse(channelIdStr, out var channelId) || channelId == 0) return;
 
             var channel = await _discordClient.GetChannelAsync(channelId) as IMessageChannel;
             if (channel == null) return;
@@ -161,7 +161,23 @@ namespace Discord.Services
             {
                 foreach (var bet in match.Bets)
                 {
-                    embed.AddField(bet.User.Username, $"Bet: **{bet.PredictedHomeScore}:{bet.PredictedAwayScore}**", inline: true);
+                    string betDetails = $"**{bet.PredictedHomeScore}:{bet.PredictedAwayScore}**";
+                    if (bet.PredictedHomeScore == bet.PredictedAwayScore && bet.PredictedWinner.HasValue)
+                    {
+                        string winnerTeam = bet.PredictedWinner == 1 ? match.HomeTeam : match.AwayTeam;
+                        string winnerFlag = FlagHelper.GetFlag(winnerTeam);
+                        string winnerName = FlagHelper.GetName(winnerTeam);
+                        betDetails += $" (advances: {winnerFlag} {winnerName})";
+                    }
+
+                    if (embed.Fields.Count < 25)
+                    {
+                        embed.AddField(bet.User.Username, $"Bet: {betDetails}", inline: true);
+                    }
+                    else if (embed.Fields.Count == 25)
+                    {
+                        embed.WithFooter($"...and {match.Bets.Count - 25} more predictions.");
+                    }
                 }
             }
             else
@@ -318,7 +334,7 @@ namespace Discord.Services
         private async Task MaintainPersistentMessageAsync(string channelConfigKey, string messageIdConfigKey, Embed embed, MessageComponent? components = null)
         {
             var channelIdStr = _configuration[channelConfigKey];
-            if (string.IsNullOrEmpty(channelIdStr) || !ulong.TryParse(channelIdStr, out var channelId)) return;
+            if (string.IsNullOrEmpty(channelIdStr) || !ulong.TryParse(channelIdStr, out var channelId) || channelId == 0) return;
 
             var channel = await _discordClient.GetChannelAsync(channelId) as ITextChannel;
             if (channel == null) return;
@@ -393,7 +409,7 @@ namespace Discord.Services
         private async Task SendToChannelAsync(string configKey, Embed embed)
         {
             var channelIdStr = _configuration[configKey];
-            if (string.IsNullOrEmpty(channelIdStr) || !ulong.TryParse(channelIdStr, out var channelId)) return;
+            if (string.IsNullOrEmpty(channelIdStr) || !ulong.TryParse(channelIdStr, out var channelId) || channelId == 0) return;
 
             var channel = await _discordClient.GetChannelAsync(channelId) as IMessageChannel;
             if (channel != null)
@@ -495,7 +511,7 @@ namespace Discord.Services
             if (usersToPing.Any())
             {
                 var channelIdStr = _configuration["NotificationChannelId"];
-                if (ulong.TryParse(channelIdStr, out var channelId))
+                if (ulong.TryParse(channelIdStr, out var channelId) && channelId != 0)
                 {
                     var channel = await _discordClient.GetChannelAsync(channelId) as ITextChannel;
                     if (channel != null)

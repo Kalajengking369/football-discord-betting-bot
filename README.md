@@ -3,7 +3,7 @@
 [![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Discord.Net](https://img.shields.io/badge/Discord.Net-3.19-5865F2?logo=discord&logoColor=white)](https://github.com/discord-net/Discord.Net)
 [![Docker Ready](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-10%20Passed-brightgreen)](https://github.com/)
+[![CI Build & Test](https://github.com/Kalajengking369/football-discord-betting-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/Kalajengking369/football-discord-betting-bot/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A modern, production-ready Discord bot for organizing football betting contests on servers. Designed for major tournaments (FIFA World Cup, UEFA EURO) as well as domestic leagues (Premier League, Champions League, etc.).
@@ -16,12 +16,14 @@ Powered by **.NET 9**, **Discord.Net**, **Entity Framework Core (SQLite)**, and 
 
 - **⚽ Live Match Synchronization**: Automatically syncs fixtures, live status (`TIMED`, `IN_PLAY`, `FINISHED`), regular time scores, and extra-time / penalty shootouts from football-data.org.
 - **🎯 Ephemeral & Fair Betting**: Place predictions using Discord Modals and Buttons. Tips remain secret until kickoff to prevent players from copying each other. At kickoff, all predictions are announced publicly.
-- **🏆 Playoff & Overtime Scoring**:
+- **🏆 Configurable Scoring & Playoff Rules**:
   - **4 points**: Exact standard time (90 min) score.
   - **2 points**: Correct match winner with different score.
   - **2 points**: Predicted draw and match ended in a draw.
   - **+1 point**: Bonus for correctly predicting which team advances in playoff overtime/penalties.
-  - **1 point**: Predicted regular-time team win, but that team won in overtime.
+  - **1 point**: Predicted regular-time team win, but that team won in overtime/penalties.
+  - **1 point**: Predicted draw with advancement pick, but that team won in regular time.
+  - *All point values are fully customizable via configuration (`appsettings.json` or `.env`).*
 - **📊 Real-time Persistent Dashboards**: Dedicated Discord channels display an auto-updating Leaderboard and an 8-match Upcoming Fixtures overview with interactive action buttons.
 - **🔔 Automated Kickoff Reminders**: Background worker alerts participants in advance if they haven't submitted their predictions yet.
 - **🔄 Admin Recalculation**: `/recalc-match` command allows server admins to re-sync or adjust scores and recalculate points if an official result is corrected.
@@ -56,8 +58,8 @@ Powered by **.NET 9**, **Discord.Net**, **Entity Framework Core (SQLite)**, and 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/<your-username>/<your-repo-name>.git
-   cd <your-repo-name>
+   git clone https://github.com/Kalajengking369/football-discord-betting-bot.git
+   cd football-discord-betting-bot
    ```
 
 2. **Configure environment variables**:
@@ -92,8 +94,8 @@ Data will be safely stored in the `./data/betting_bot.db` SQLite database on you
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/<your-username>/<your-repo-name>.git
-   cd <your-repo-name>
+   git clone https://github.com/Kalajengking369/football-discord-betting-bot.git
+   cd football-discord-betting-bot
    ```
 
 2. **Create configuration**:
@@ -125,6 +127,11 @@ Configuration can be provided either through `appsettings.json` or standard envi
 | `BotSettings:CompetitionId` | `BotSettings__CompetitionId` | `2000` | Competition ID (`2000` = World Cup, `2021` = Premier League, `2001` = Champions League, `2018` = EURO) |
 | `BotSettings:SyncIntervalMinutes`| `BotSettings__SyncIntervalMinutes` | `10` | Frequency (in minutes) for fetching API updates |
 | `BotSettings:DashboardDays` | `BotSettings__DashboardDays` | `12` | Window of days ahead to display in match dashboard |
+| `Scoring:ExactScorePoints` | `Scoring__ExactScorePoints` | `4` | Points awarded for exact regular time score |
+| `Scoring:WinnerPoints` | `Scoring__WinnerPoints` | `2` | Points awarded for correctly guessing the winning team |
+| `Scoring:DrawPoints` | `Scoring__DrawPoints` | `2` | Points awarded for correctly guessing a draw |
+| `Scoring:PlayoffBonusPoints` | `Scoring__PlayoffBonusPoints` | `1` | Extra bonus point for correctly guessing who advances in playoffs |
+| `Scoring:OvertimeBonusPoints` | `Scoring__OvertimeBonusPoints` | `1` | Point for predicting team win that occurred in extra time, or draw with advancing team |
 | `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` | `Data Source=betting_bot.db` | SQLite database connection string |
 
 ---
@@ -151,7 +158,7 @@ dotnet test
 ```
 
 ```text
-Passed!  - Failed: 0, Passed: 10, Skipped: 0, Total: 10
+Passed!  - Failed: 0, Passed: 11, Skipped: 0, Total: 11
 ```
 
 ---

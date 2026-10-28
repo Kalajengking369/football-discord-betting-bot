@@ -1,5 +1,6 @@
 using Xunit;
 using Discord.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace Discord.Tests
 {
@@ -88,6 +89,34 @@ namespace Discord.Tests
             // User predicted Away win, Home won in standard time
             var points2 = _scoring.CalculatePoints(3, 1, "HOME_TEAM", 0, 2, null);
             Assert.Equal(0, points2);
+        }
+
+        [Fact]
+        public void CalculatePoints_WithCustomConfiguration_UsesConfiguredPoints()
+        {
+            var configData = new Dictionary<string, string?>
+            {
+                { "Scoring:ExactScorePoints", "10" },
+                { "Scoring:WinnerPoints", "5" },
+                { "Scoring:DrawPoints", "4" },
+                { "Scoring:PlayoffBonusPoints", "2" },
+                { "Scoring:OvertimeBonusPoints", "3" }
+            };
+
+            var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+                .AddInMemoryCollection(configData)
+                .Build();
+
+            var customScoring = new ScoringService(configuration);
+
+            // Exact score should award 10 pts
+            Assert.Equal(10, customScoring.CalculatePoints(2, 1, "HOME_TEAM", 2, 1, null));
+
+            // Correct winner should award 5 pts
+            Assert.Equal(5, customScoring.CalculatePoints(2, 1, "HOME_TEAM", 3, 0, null));
+
+            // Exact draw + playoff winner should award 10 + 2 = 12 pts
+            Assert.Equal(12, customScoring.CalculatePoints(1, 1, "HOME_TEAM", 1, 1, 1));
         }
     }
 }

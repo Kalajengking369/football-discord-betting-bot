@@ -2,6 +2,12 @@ namespace Discord.Services
 {
     public interface IScoringService
     {
+        int ExactScorePoints { get; }
+        int WinnerPoints { get; }
+        int DrawPoints { get; }
+        int PlayoffBonusPoints { get; }
+        int OvertimeBonusPoints { get; }
+
         /// <summary>
         /// Calculates points awarded for a match bet based on standard time score, 
         /// overtime result, and playoff advancement predictions.
@@ -12,7 +18,7 @@ namespace Discord.Services
         /// <param name="homePred">Predicted home score</param>
         /// <param name="awayPred">Predicted away score</param>
         /// <param name="predWinnerOpt">1 for Home, 2 for Away if user chose a winner on a draw prediction</param>
-        /// <returns>Points earned (0, 1, 2, 4, or 5)</returns>
+        /// <returns>Points earned</returns>
         int CalculatePoints(
             int homeRealStandard,
             int awayRealStandard,

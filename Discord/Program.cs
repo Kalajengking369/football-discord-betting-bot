@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Discord;
 using Discord.WebSocket;
 using Discord.Interactions;
@@ -20,10 +21,25 @@ builder.Configuration.AddEnvironmentVariables();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Data Source=betting_bot.db";
 
+// Ensure SQLite database directory exists if specified in connection string
+try
+{
+    var sqliteBuilder = new SqliteConnectionStringBuilder(connectionString);
+    if (!string.IsNullOrEmpty(sqliteBuilder.DataSource))
+    {
+        var dbDir = Path.GetDirectoryName(sqliteBuilder.DataSource);
+        if (!string.IsNullOrEmpty(dbDir) && !Directory.Exists(dbDir))
+        {
+            Directory.CreateDirectory(dbDir);
+        }
+    }
+}
+catch { }
+
 // Core Domain Services
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(connectionString));
-builder.Services.AddSingleton<IScoringService, ScoringService>();
+builder.Services.AddSingleton<IScoringService>(sp => new ScoringService(sp.GetRequiredService<IConfiguration>()));
 
 // Discord Services
 builder.Services.AddSingleton(new DiscordSocketConfig
